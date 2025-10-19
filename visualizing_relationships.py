@@ -151,6 +151,7 @@ def plot_wage_function(data, var, use_loess, degree, show_ci, ax, color=color[0:
         )
         plt.xticks(rotation=90, fontsize=6)
         plt.yticks(fontsize=6)
+        ax.set_ylim(bottom=3)
 
     # Axis labels and legend formatting
     ax.set_xlabel(var.replace('_', ' '), fontsize=6)
