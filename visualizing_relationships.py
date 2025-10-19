@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from scipy.stats import t
 import streamlit as st
@@ -141,29 +142,65 @@ def plot_wage_function(data, var, use_loess, degree, show_ci, ax, color=color[0:
                 )
 
         ax.legend(fontsize=6)
+        # Axis labels and legend formatting
+        ax.set_xlabel(var.replace('_', ' '), fontsize=6)
+        ax.set_ylabel('ln(earnings per hour, US dollars)', fontsize=6)
+        ax.tick_params(axis='both', which='major', labelsize=6)
+        ax.grid(False)
+        ax.legend(
+            loc='upper center', bbox_to_anchor=(0.5, 1.20),
+            ncol=2, frameon=False, title='Gender', fontsize=6, title_fontsize=6
+        )
+        ax.spines[['top', 'right']].set_visible(False)
+        plt.tight_layout()
 
     else:
-        # Use seaborn barplot with automatic 95% CI computation
         sns.barplot(
             x=var, y='ln_wage', hue='Gender', data=data,
-            ax=ax, palette=color, capsize=0.1 if show_ci else 0, 
-            errorbar=('ci', 95 if show_ci else False)
+            ax=ax[0], palette=color, capsize=0.1 if show_ci else 0,
+            errorbar=('ci', 95 if show_ci else False),
+            err_kws={'linewidth':0.8}
         )
-        plt.xticks(rotation=90, fontsize=6)
-        plt.yticks(fontsize=6)
-        ax.set_ylim(bottom=3)
+        ax[0].set_ylim(bottom=3)
 
-    # Axis labels and legend formatting
-    ax.set_xlabel(var.replace('_', ' '), fontsize=6)
-    ax.set_ylabel('ln(earnings per hour, US dollars)', fontsize=6)
-    ax.tick_params(axis='both', which='major', labelsize=6)
-    ax.grid(False)
-    ax.legend(
-        loc='upper center', bbox_to_anchor=(0.5, 1.20),
-        ncol=2, frameon=False, title='Gender', fontsize=6, title_fontsize=6
-    )
-    ax.spines[['top', 'right']].set_visible(False)
-    plt.tight_layout()
+        sns.barplot(
+            x=var, y='ln_wage', hue='Gender', data=data,
+            ax=ax[1], palette=color, capsize=0.1 if show_ci else 0,
+            errorbar=('ci', 95 if show_ci else False),
+            err_kws={'linewidth':0.8}
+        )
+        ax[1].set_ylim(0, 0.2)
+
+        # Hide the spines and ticks between the plots
+        ax[0].spines['bottom'].set_visible(False)
+        ax[1].spines['top'].set_visible(False)
+        ax[1].spines['right'].set_visible(False)
+        ax[0].spines['right'].set_visible(False)
+        ax[0].spines['top'].set_visible(False)
+        ax[0].tick_params(bottom=False, labelbottom=False)
+
+        d = 0.01
+        kwargs = dict(transform=ax[0].transAxes, color='k', clip_on=False)
+        ax[0].plot((-d, +d), (-d, +d), **kwargs)
+        kwargs.update(transform=ax[1].transAxes, color='k', clip_on=False)
+        ax[1].plot((-d, +d), (1-4*d, 1+4*d), **kwargs)
+
+        ax[1].tick_params(axis='x', labelsize=6)
+        ax[0].yaxis.set_major_locator(MultipleLocator(0.2))
+        ax[1].yaxis.set_major_locator(MultipleLocator(0.2))
+        ax[1].tick_params(axis='y', labelsize=6)
+        ax[0].tick_params(axis='y', labelsize=6)
+        ax[1].legend().set_visible(False)
+        ax[0].legend(
+            loc='upper center', bbox_to_anchor=(0.5, 1.20),
+            ncol=2, frameon=False, title='Gender', fontsize=6, title_fontsize=6
+        )
+        ax[1].set_ylabel('')
+        ax[1].set_xlabel(var.replace('_', ' '), fontsize=6)
+        ax[0].set_ylabel('ln(earnings per hour, US dollars)', fontsize=6)
+        plt.xticks(rotation=90)
+        plt.tight_layout()
+        plt.subplots_adjust(hspace=0.1)
     return ax
 
 
@@ -185,12 +222,26 @@ if variable == 'Age':
 
 show_ci_option = st.sidebar.checkbox('Show 95% Confidence Intervals', value=True)
 
-fig, ax = plt.subplots(figsize=(5, 3.5))
-plot_wage_function(
-    st.session_state['cps'], variable, 
-    use_loess=loess_option if variable == 'Age' else False,
-    degree=degree if variable == 'Age' and not loess_option else None,
-    show_ci=show_ci_option,
-    ax=ax
-)
+if variable == 'Age':
+    fig, ax = plt.subplots(figsize=(5, 3.5))
+    plot_wage_function(
+        st.session_state['cps'], variable, 
+        use_loess=loess_option if variable == 'Age' else False,
+        degree=degree if variable == 'Age' and not loess_option else None,
+        show_ci=show_ci_option,
+        ax=ax
+    )
+else:
+    fig, (ax1, ax2) = plt.subplots(
+        2, 1, sharex=True, figsize=(5, 3.5),
+        gridspec_kw={'height_ratios': [4, 1]}
+    )
+    plot_wage_function(
+        st.session_state['cps'], variable, 
+        use_loess=False,
+        degree=None,
+        show_ci=show_ci_option,
+        ax=(ax1, ax2)
+    )
+
 st.pyplot(fig, width='content')
