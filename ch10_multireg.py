@@ -86,8 +86,8 @@ if 'data_loaded' not in st.session_state:
     st.session_state['data_loaded'] = True
 
 pg = st.navigation([
-    st.Page("ch10_welcome_page.py", title='Welcome Page'),
-    st.Page("ch10_visualizing_relationships.py", title='Visualizing Relationships'),
-    st.Page("ch10_multiple_regression_analysis.py", title='Multiple Regression Analysis')])
+    st.Page("welcome_page.py", title='Welcome Page'),
+    st.Page("visualizing_relationships.py", title='Visualizing Relationships'),
+    st.Page("multiple_regression_analysis.py", title='Multiple Regression Analysis')])
 
 pg.run()
