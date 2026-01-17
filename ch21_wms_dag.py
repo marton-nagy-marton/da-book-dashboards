@@ -6,45 +6,37 @@ import statsmodels.formula.api as smf
 
 color = ["#3a5e8c", "#10a53d", "#541352", "#ffcf20", "#2f9aa0"]
 
-st.set_page_config(layout="wide", page_title="Ch. 21 - WMS DAG")
-st.title("Ch. 21 - Exploring Confounders and Bad Conditioners in the WMS dataset")
+st.set_page_config(layout="wide", page_title="WMS Causal Inference", initial_sidebar_state="collapsed")
 
-st.markdown("""
-### Introduction
+st.markdown(
+    """
+<style>
+    [data-testid="stExpandSidebarButton"] {
+        display: none
+    }
+</style>
+""",
+    unsafe_allow_html=True,
+)
+st.title("Exploring Confounders and Bad Conditioners in the WMS dataset")
 
-This dashboard is designed to help explore **causal inference concepts** using the *World Management Survey (WMS)* dataset.  
-The central question is whether **family/founder ownership** (X) has a causal impact on the **management score** (Y).  
+st.markdown("""### Introduction
+
+This dashboard is designed to help explore **causal inference concepts** using the *World Management Survey (WMS)* dataset. 
+The central question is whether **family/founder ownership** (X) has a causal impact on the **management score** (Y). 
 To address this, we need to carefully consider which variables to condition on when estimating causal effects.
-
-### Key Functionalities
-
-- **Assign Roles to Variables:**  
-  In the sidebar, you can specify the causal role of each variable (e.g., *Common Cause*, *Mechanism*, *Collider*, etc.).  
-  These choices determine which variables are included in the regression model and how the DAG (Directed Acyclic Graph) is drawn.
-
-- **Conditioning Options:**  
-  Variables classified as *Common Causes*, *Reverse Causality*, or *Unwanted Mechanisms* are automatically added to the regression model.  
-  You can also toggle whether to use more appropriate functional forms (e.g., log transformations, squared terms).
-
-- **Visual Causal Diagram (DAG):**  
-  The DAG updates based on your inputs, showing which variables are conditioned on (yellow), which are not (gray), and highlighting the treatment (blue) and outcome (green).
-
-- **Regression Results Table:**  
-  The dashboard compares the **Base Model** (regressing management score on ownership only) with your **Constructed Model** (ownership plus selected conditioning variables).  
-  Coefficients, standard errors, significance levels, and R-squared are displayed for comparison.
+Below, you can assign causal roles to various variables in the dataset and see how they affect the estimated relationship between ownership and management score.
+Variables classified as *Common Causes*, *Reverse Causality*, or *Unwanted Mechanisms* are automatically added to the regression model.
+You can also toggle whether to use more appropriate functional forms (e.g., log transformations, squared terms) instead of simple linear terms.
+The dashboard compares the **base model** (regressing management score on ownership only) with your **constructed model** (ownership plus selected conditioning variables).
 
 ### Things to Observe
 
 - How does the estimated effect of **ownership on management** change as you condition on different variables?  
-- Do some variables introduce bias when conditioned on (e.g., colliders)?  
 - Does including *mechanisms* block part of the causal effect you want to capture?  
-- Compare the **Base Model** vs. **Constructed Model** to see how careful variable selection matters for causal inference.
+- Compare the **base model** vs. **constructed model** to see how careful variable selection matters for causal inference.
 
 """)
-
-
-st.sidebar.header("Settings")
-st.sidebar.subheader("Role of Variables in DAG")
 
 role_options = ["Common Cause", "Reverse Causality", "Unwanted Mechanism",
                 "Mechanism", "Collider", "Exog. Variation in X",
@@ -76,54 +68,12 @@ default_roles = {
     'age_cat': "Reverse Causality"
 }
 
-roles = {}
-
-# Table header
-c1, c2 = st.sidebar.columns([2, 3])
-c1.markdown("**Variable**")
-c2.markdown("**Role**")
-
-# Build rows with preserved defaults
-for var, label in label_map.items():
-    c1, c2 = st.sidebar.columns([2, 3])
-    c1.markdown(label)
-    roles[var] = c2.selectbox(
-        "",
-        options=role_options,
-        index=role_options.index(default_roles[var]),  # preserve default
-        key=f"role_{var}"
-    )
-
-
-st.sidebar.subheader("Other Settings")
-funcform = st.sidebar.toggle("Use proper functional form of variables", value=True, key='funcform')
-
 @st.cache_data
 def load_data():
     data = pd.read_csv("data/wms_da_textbook-work.csv")
     return data
 
 data = load_data()
-
-st.sidebar.download_button(
-    label="Download Data",
-    data=data.to_csv(index=False),
-    file_name="ch21_wms_data.csv",
-    mime="text/csv"
-)
-
-vars_to_condition = [var for var, role in roles.items() if role in roles_to_condition]
-if funcform:
-    if 'degree_m' in vars_to_condition:
-        vars_to_condition.append('degree_m_sq')
-    if 'degree_nm' in vars_to_condition:
-        vars_to_condition.append('degree_nm_sq')
-    if 'emp_firm' in vars_to_condition:
-        vars_to_condition.append('lnemp')
-        vars_to_condition.remove('emp_firm')
-
-base_model = smf.ols("management ~ foundfam_owned", data=data).fit(cov_type='HC1')
-user_model = smf.ols("management ~ foundfam_owned + " + " + ".join(vars_to_condition), data=data).fit(cov_type='HC1')
 
 def add_stars(val):
     if val < 0.01:
@@ -134,21 +84,6 @@ def add_stars(val):
         return "*"
     else:
         return ""
-
-results_dict = {
-    'Base Model': {
-        'Coefficient': f"{base_model.params['foundfam_owned']:.3f}{add_stars(base_model.pvalues['foundfam_owned'])}",
-        'SE' : f"({base_model.bse['foundfam_owned']:.3f})",
-        'R-squared': f"{base_model.rsquared:.3f}"
-    },
-    'Constructed Model': {
-        'Coefficient': f"{user_model.params['foundfam_owned']:.3f}{add_stars(user_model.pvalues['foundfam_owned'])}",
-        'SE' : f"({user_model.bse['foundfam_owned']:.3f})",
-        'R-squared': f"{user_model.rsquared:.3f}"
-    }
-}
-
-results_df = pd.DataFrame(results_dict).T
 
 def make_dag_string(roles, vars_to_condition):
     if 'lnemp' in vars_to_condition:
@@ -260,7 +195,6 @@ digraph G {{
 
     dot += "}\n"
     return dot
-dot = make_dag_string(roles, vars_to_condition)
 
 def show_legend():
     fig, ax = plt.subplots(figsize=(1, 0.2))
@@ -283,11 +217,79 @@ def show_legend():
         handleheight=1.5
     )
 
-    st.pyplot(fig, clear_figure=True, use_container_width=False)
+    st.pyplot(fig, clear_figure=True, width='content')
 
-st.subheader("Causal Diagram (DAG) Based on Inputs")
-show_legend()
-st.graphviz_chart(dot)
 
-st.subheader("Regression Results")
-st.dataframe(results_df, use_container_width=True)
+c1, c2 = st.columns(2)
+
+roles = {}
+
+# Table header
+with c1:
+    st.subheader("Assign Roles to Variables")
+    c11, c12 = st.columns(2)
+    # Build rows with preserved defaults
+    idx = 0
+    for var, label in label_map.items():
+        if idx < 4:
+            with c11:
+                roles[var] = st.selectbox(
+                    label,
+                    options=role_options,
+                    index=role_options.index(default_roles[var]),  # preserve default
+                    key=f"role_{var}"
+                )
+        else:
+            with c12:
+                roles[var] = st.selectbox(
+                    label,
+                    options=role_options,
+                    index=role_options.index(default_roles[var]),  # preserve default
+                    key=f"role_{var}"
+                )
+        idx += 1
+
+vars_to_condition = [var for var, role in roles.items() if role in roles_to_condition]
+
+with c2:
+    st.subheader("Causal Diagram (DAG)")
+    dot = make_dag_string(roles, vars_to_condition)
+    show_legend()
+    st.graphviz_chart(dot)
+with c1:
+    st.subheader("Regression Results")
+    funcform = st.toggle("Use proper functional form of variables", value=True, key='funcform')
+    if funcform:
+        if 'degree_m' in vars_to_condition:
+            vars_to_condition.append('degree_m_sq')
+        if 'degree_nm' in vars_to_condition:
+            vars_to_condition.append('degree_nm_sq')
+        if 'emp_firm' in vars_to_condition:
+            vars_to_condition.append('lnemp')
+            vars_to_condition.remove('emp_firm')
+
+    base_model = smf.ols("management ~ foundfam_owned", data=data).fit(cov_type='HC1')
+    user_model = smf.ols("management ~ foundfam_owned + " + " + ".join(vars_to_condition), data=data).fit(cov_type='HC1')
+
+    results_dict = {
+        'Base Model': {
+            'Coefficient': f"{base_model.params['foundfam_owned']:.3f}{add_stars(base_model.pvalues['foundfam_owned'])}",
+            'SE' : f"({base_model.bse['foundfam_owned']:.3f})",
+            'R-squared': f"{base_model.rsquared:.3f}"
+        },
+        'Constructed Model': {
+            'Coefficient': f"{user_model.params['foundfam_owned']:.3f}{add_stars(user_model.pvalues['foundfam_owned'])}",
+            'SE' : f"({user_model.bse['foundfam_owned']:.3f})",
+            'R-squared': f"{user_model.rsquared:.3f}"
+        }
+    }
+
+    results_df = pd.DataFrame(results_dict).T
+    st.dataframe(results_df, width='stretch')
+
+st.download_button(
+    label="Download Data",
+    data=data.to_csv(index=False),
+    file_name="ch21_wms_data.csv",
+    mime="text/csv"
+)
