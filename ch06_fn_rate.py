@@ -123,12 +123,12 @@ if mu_null != mu_true:
         st.markdown(
             f"""
             ### How to interpret:
-            **False Negative Rate (β)**: {beta:.3f} — The probability of failing to reject H₀ when it is actually false.
+            **False negative rate (β)**: {beta:.3f} — The probability of failing to reject H₀ when it is actually false.
             
-            **Power (1 - β)**: {power:.3f} — The probability of correctly rejecting H₀ (True Positive rate).
+            **Power (1 - β)**: {power:.3f} — The probability of correctly rejecting H₀ (true positive rate).
 
-            - **Teal Area (TP)**: Correct rejection of a false null.
-            - **Purple Area (FN)**: Missing a real effect because the t-statistic fell within the critical bounds.
+            - **Teal area (TP)**: Correct rejection of a false null.
+            - **Purple area (FN)**: Missing a real effect because the t-statistic fell within the critical bounds.
             """
         )
 
@@ -136,6 +136,7 @@ else:
     # Logic for when H0 is actually true (True Negatives and False Positives)
     fig, ax = plt.subplots()
     ax.plot(x_t, t_null_distribution.pdf(x_t), label="Distribution under H₀", color='purple')
+    ax.plot(x_t, t_alt_distribution.pdf(x_t), label="Reality (H₀ is true)", color='teal')
     
     x_fp_pos = x_t[x_t > t_crit]
     ax.fill_between(x_fp_pos, 0, t_null_distribution.pdf(x_fp_pos), color='teal', alpha=0.5, label="FP")
@@ -156,14 +157,10 @@ else:
     
     with c2:
         st.subheader("Distributions of t-Statistics")
-        st.caption("Note: Based on the provided parameters, the null hypothesis is true (μ₀ = μ_true).")
+        st.caption(r"This shows the distribution of t-values under the null and alternative hypotheses. Based on the provided parameters, the null hypothesis is true ($\mu_0 = \mu_{true}$).")
         st.pyplot(fig)
-
-        st.markdown(
-        f"""
-        *Note: Because μ₀ = μ_true, the null hypothesis is correct. Any rejection here is an error.*
-
+        st.markdown(f"""
         ### How to interpret:
-        - **Shaded Teal (False Positive)**: We rejected H₀ even though it was true (Type I error). This equals your α ({alpha}).
-        - **Shaded Purple (True Negative)**: We correctly failed to reject the null hypothesis.
+        - **Shaded teal (false positive)**: We rejected H₀ even though it was true (Type I error). This equals your α ({alpha}).
+        - **Shaded purple (true negative)**: We correctly failed to reject the null hypothesis.
         """)
