@@ -416,7 +416,7 @@ def render_shared_sidebar() -> tuple[str, dict, st.delta_generator.DeltaGenerato
                 "How strong is non-compliance in the treatment group?",
                 options=["None", "Low", "Moderate", "High"],
                 default="Low",
-                help="Share of assigned participants who actually participate in the training (compliance rate).",
+                help="Share of assigned participants who do not participate in the training (non-compliance rate).",
             )
             self_selection = st.segmented_control(
                 "How strong is self-selection in the control group?",
