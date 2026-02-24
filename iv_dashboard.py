@@ -746,7 +746,7 @@ def main() -> None:
     if page == "Introduction":
         render_intro_page(df)
     elif page == "Data balance and diagnostics":
-        render_diagnostics_page(df, st.session_state.current_params)
+        render_diagnostics_page(df, params)
     else:
         render_regression_page(df, params)
 
